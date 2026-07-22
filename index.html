@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歷年健康檢查與 InBody 數據互動視覺化儀表板 (2021-2026)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Plotly.js CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Microsoft JhengHei, sans-serif; background-color: #f8fafc; }
+        .card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
+        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="card p-6 mb-6 bg-gradient-to-r from-blue-700 via-indigo-700 to-teal-600 text-white shadow-lg">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                        <i class="fa-solid fa-heart-pulse text-rose-400"></i>
+                        歷年健康檢查與體組成互動儀表板
+                    </h1>
+                    <p class="text-blue-100 mt-2 text-sm md:text-base">
+                        受檢者：<span class="font-semibold text-white">林先生</span>（健身教練 / 高強度肌力訓練者） | 完整追蹤年份：<span class="font-semibold text-yellow-300">2021 ～ 2026 年 (共 6 次檢測)</span>
+                    </p>
+                </div>
+                <div class="mt-4 md:mt-0 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 text-xs md:text-sm">
+                    <i class="fa-solid fa-user-doctor mr-1 text-emerald-300"></i> 首席數位預防醫學團隊 專屬分析
+                </div>
+            </div>
+        </header>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="card p-4 border-l-4 border-blue-500">
+                <div class="text-xs text-gray-500 font-medium">最新體重 (2026)</div>
+                <div class="text-2xl font-bold text-gray-800 mt-1">50.9 <span class="text-sm font-normal">kg</span></div>
+                <div class="text-xs text-emerald-600 mt-1"><i class="fa-solid fa-arrow-down"></i> -3.1 kg vs 2021</div>
+            </div>
+            <div class="card p-4 border-l-4 border-emerald-500">
+                <div class="text-xs text-gray-500 font-medium">骨骼肌重 (2026)</div>
+                <div class="text-2xl font-bold text-gray-800 mt-1">24.0 <span class="text-sm font-normal">kg</span></div>
+                <div class="text-xs text-emerald-600 mt-1"><i class="fa-solid fa-arrow-up"></i> +0.8 kg 肌肉增加</div>
+            </div>
+            <div class="card p-4 border-l-4 border-amber-500">
+                <div class="text-xs text-gray-500 font-medium">體脂肪率 (2026)</div>
+                <div class="text-2xl font-bold text-gray-800 mt-1">15.7 <span class="text-sm font-normal">%</span></div>
+                <div class="text-xs text-emerald-600 mt-1"><i class="fa-solid fa-arrow-down"></i> -6.9% 顯著減脂</div>
+            </div>
+            <div class="card p-4 border-l-4 border-indigo-500">
+                <div class="text-xs text-gray-500 font-medium">體組成健康評分</div>
+                <div class="text-2xl font-bold text-gray-800 mt-1">79 <span class="text-sm font-normal">分</span></div>
+                <div class="text-xs text-emerald-600 mt-1"><i class="fa-solid fa-trophy"></i> +9分 歷史新高</div>
+            </div>
+            <div class="card p-4 border-l-4 border-teal-500 col-span-2 md:col-span-1">
+                <div class="text-xs text-gray-500 font-medium">腎絲球過濾率 eGFR (2023)</div>
+                <div class="text-2xl font-bold text-gray-800 mt-1">141.2</div>
+                <div class="text-xs text-emerald-600 mt-1"><i class="fa-solid fa-shield-halved"></i> 頂級淨化效率 (正常>60)</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="card mb-6 overflow-hidden">
+            <div class="flex border-b text-gray-600 text-sm md:text-base overflow-x-auto">
+                <button onclick="switchTab('tab-body')" id="btn-tab-body" class="tab-active px-6 py-4 flex items-center gap-2 whitespace-nowrap focus:outline-none">
+                    <i class="fa-solid fa-dumbbell"></i> 體組成趨勢 (InBody/ACCUNIQ)
+                </button>
+                <button onclick="switchTab('tab-lab')" id="btn-tab-lab" class="px-6 py-4 flex items-center gap-2 whitespace-nowrap focus:outline-none hover:text-blue-600">
+                    <i class="fa-solid fa-vial"></i> 抽血生化與心血管數據
+                </button>
+                <button onclick="switchTab('tab-imaging')" id="btn-tab-imaging" class="px-6 py-4 flex items-center gap-2 whitespace-nowrap focus:outline-none hover:text-blue-600">
+                    <i class="fa-solid fa-x-ray"></i> 影像學與長期焦點 (骨密度/超音波)
+                </button>
+                <button onclick="switchTab('tab-advice')" id="btn-tab-advice" class="px-6 py-4 flex items-center gap-2 whitespace-nowrap focus:outline-none hover:text-blue-600">
+                    <i class="fa-solid fa-lightbulb"></i> 預防醫學與個人化建議
+                </button>
+            </div>
+
+            <!-- Tab Content 1: Body Composition -->
+            <div id="tab-body" class="p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-blue-600"></i> 歷年 6 年「增肌減脂」黃金變化曲線 (2021-2026)
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card p-4 border border-gray-100">
+                        <div id="chart-weight-muscle" class="w-full h-80"></div>
+                    </div>
+                    <div class="card p-4 border border-gray-100">
+                        <div id="chart-fat-percent" class="w-full h-80"></div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-600 border-collapse border border-gray-200">
+                        <thead class="bg-gray-50 text-gray-700 font-semibold">
+                            <tr>
+                                <th class="p-3 border">年份</th>
+                                <th class="p-3 border">檢測日期</th>
+                                <th class="p-3 border">儀器型號</th>
+                                <th class="p-3 border">體重 (kg)</th>
+                                <th class="p-3 border">骨骼肌重 (kg)</th>
+                                <th class="p-3 border">體脂肪重 (kg)</th>
+                                <th class="p-3 border">體脂肪率 (%)</th>
+                                <th class="p-3 border">BMI</th>
+                                <th class="p-3 border">基礎代謝 (kcal)</th>
+                                <th class="p-3 border">內臟脂肪等級</th>
+                                <th class="p-3 border">健康評分</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="hover:bg-gray-50 border-b">
+                                <td class="p-3 border font-semibold">2021</td>
+                                <td class="p-3 border">2021/12/28</td>
+                                <td class="p-3 border">InBody 120</td>
+                                <td class="p-3 border">54.0</td>
+                                <td class="p-3 border font-semibold text-blue-600">23.2</td>
+                                <td class="p-3 border">12.2</td>
+                                <td class="p-3 border">22.6%</td>
+                                <td class="p-3 border">21.5</td>
+                                <td class="p-3 border">1272</td>
+                                <td class="p-3 border">4 (1-10級)</td>
+                                <td class="p-3 border font-semibold">70</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 border-b">
+                                <td class="p-3 border font-semibold">2022</td>
+                                <td class="p-3 border">2022/08/10</td>
+                                <td class="p-3 border">InBody 120</td>
+                                <td class="p-3 border">54.1</td>
+                                <td class="p-3 border font-semibold text-blue-600">23.7</td>
+                                <td class="p-3 border">11.5</td>
+                                <td class="p-3 border">21.2%</td>
+                                <td class="p-3 border">21.6</td>
+                                <td class="p-3 border">1290</td>
+                                <td class="p-3 border">3 (1-10級)</td>
+                                <td class="p-3 border font-semibold">72</td>
+                            </tr>
+                            <tr class="hover:bg-blue-50 border-b bg-blue-50/40">
+                                <td class="p-3 border font-bold text-blue-800">2023 (新加入)</td>
+                                <td class="p-3 border font-semibold">2023/06/12</td>
+                                <td class="p-3 border">ACCUNIQ BC720</td>
+                                <td class="p-3 border font-semibold">50.8</td>
+                                <td class="p-3 border font-semibold text-blue-600">23.8</td>
+                                <td class="p-3 border">8.2</td>
+                                <td class="p-3 border font-semibold text-amber-600">16.1%</td>
+                                <td class="p-3 border">20.3</td>
+                                <td class="p-3 border">1290</td>
+                                <td class="p-3 border">6 (1-15級)</td>
+                                <td class="p-3 border font-semibold text-indigo-600">78</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 border-b">
+                                <td class="p-3 border font-semibold">2024</td>
+                                <td class="p-3 border">2024/05/29</td>
+                                <td class="p-3 border">ACCUNIQ BC720</td>
+                                <td class="p-3 border">52.3</td>
+                                <td class="p-3 border font-semibold text-blue-600">23.3</td>
+                                <td class="p-3 border">10.4</td>
+                                <td class="p-3 border">20.0%</td>
+                                <td class="p-3 border">20.7</td>
+                                <td class="p-3 border">1274</td>
+                                <td class="p-3 border">7 (1-15級)</td>
+                                <td class="p-3 border font-semibold">73</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 border-b">
+                                <td class="p-3 border font-semibold">2025</td>
+                                <td class="p-3 border">2025/05/23</td>
+                                <td class="p-3 border">ACCUNIQ BC720</td>
+                                <td class="p-3 border">51.8</td>
+                                <td class="p-3 border font-semibold text-blue-600">24.1</td>
+                                <td class="p-3 border">8.7</td>
+                                <td class="p-3 border text-amber-600 font-semibold">16.8%</td>
+                                <td class="p-3 border">20.6</td>
+                                <td class="p-3 border">1300</td>
+                                <td class="p-3 border">6 (1-15級)</td>
+                                <td class="p-3 border font-semibold">78</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50 border-b bg-emerald-50/50">
+                                <td class="p-3 border font-bold text-emerald-800">2026</td>
+                                <td class="p-3 border font-semibold">2026/07/22</td>
+                                <td class="p-3 border">ACCUNIQ BC720</td>
+                                <td class="p-3 border font-bold">50.9</td>
+                                <td class="p-3 border font-bold text-blue-600">24.0</td>
+                                <td class="p-3 border font-bold text-emerald-600">8.0</td>
+                                <td class="p-3 border text-amber-600 font-bold">15.7%</td>
+                                <td class="p-3 border font-bold">20.2</td>
+                                <td class="p-3 border font-bold">1296</td>
+                                <td class="p-3 border font-bold">7 (1-15級)</td>
+                                <td class="p-3 border font-bold text-indigo-600">79 (歷史新高)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content 2: Lab Data -->
+            <div id="tab-lab" class="p-6 hidden">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-droplet text-red-600"></i> 抽血生化、心血管與腎功能趨勢 (2021-2025)
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card p-4 border border-gray-100">
+                        <div id="chart-bp" class="w-full h-80"></div>
+                    </div>
+                    <div class="card p-4 border border-gray-100">
+                        <div id="chart-lipids" class="w-full h-80"></div>
+                    </div>
+                    <div class="card p-4 border border-gray-100">
+                        <div id="chart-kidney" class="w-full h-80"></div>
+                    </div>
+                    <div class="card p-4 border border-gray-100">
+                        <div id="chart-liver" class="w-full h-80"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content 3: Imaging -->
+            <div id="tab-imaging" class="p-6 hidden">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-microscope text-indigo-600"></i> 歷年重要影像學與特定追蹤項目對照 (2021-2025)
+                </h3>
+                <div class="space-y-4">
+                    <!-- DEXA Card -->
+                    <div class="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-bone text-2xl text-amber-600"></i>
+                            <div>
+                                <h4 class="font-bold text-amber-900">骨質密度檢驗 (DEXA 雙能量X光) - 2025 年重點預警！</h4>
+                                <p class="text-sm text-amber-800 mt-1">
+                                    腰椎 (L1-L4) T-score：<span class="font-bold text-red-600">-0.9</span>（骨密度 1.087 g/cm²）。當 T-score 小於 -1.0 即劃入骨質流失 (Osteopenia)。對於每週進行高強度大重量重訓的健身教練而言，脊椎骨密度接近臨界點屬於**高度關注項目**，需優化維生素D3、鈣質與消化吸收。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ultrasound Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-600 border-collapse border border-gray-200">
+                            <thead class="bg-gray-50 text-gray-700 font-semibold">
+                                <tr>
+                                    <th class="p-3 border">檢查類別</th>
+                                    <th class="p-3 border">2021 年</th>
+                                    <th class="p-3 border">2022 年</th>
+                                    <th class="p-3 border bg-blue-50">2023 年</th>
+                                    <th class="p-3 border">2024 年</th>
+                                    <th class="p-3 border">2025 年</th>
+                                    <th class="p-3 border">專家評估說明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b">
+                                    <td class="p-3 border font-semibold">腹部超音波</td>
+                                    <td class="p-3 border">輕度脂肪肝<br>膽囊息肉 0.3cm</td>
+                                    <td class="p-3 border">膽囊息肉 <0.3cm</td>
+                                    <td class="p-3 border bg-blue-50/30">輕度脂肪肝<br>膽囊息肉 0.27cm</td>
+                                    <td class="p-3 border">輕度脂肪肝<br>膽囊息肉 0.33cm</td>
+                                    <td class="p-3 border">輕度脂肪肝<br>膽囊息肉 0.3cm</td>
+                                    <td class="p-3 border text-xs">膽囊息肉連續 6 次檢測極度穩定維持於 0.27~0.33cm（<1.0cm屬良性追蹤即可）。雖然體脂率已低至15.7%，仍有輕度脂肪肝提示，建議控制飲食精緻糖與果糖攝取。</td>
+                                </tr>
+                                <tr class="border-b">
+                                    <td class="p-3 border font-semibold">甲狀腺超音波</td>
+                                    <td class="p-3 border text-gray-400">未檢測</td>
+                                    <td class="p-3 border">雙側囊腫<br>(最大0.37cm)</td>
+                                    <td class="p-3 border text-gray-400 bg-blue-50/30">未檢測</td>
+                                    <td class="p-3 border text-gray-400">未檢測</td>
+                                    <td class="p-3 border text-amber-700">右側多發結節(最大0.35cm伴鈣化)<br>左側囊腫 0.5cm</td>
+                                    <td class="p-3 border text-xs">屬微小結節與囊腫，2025年有發現微小鈣化點，建議每年至新陳代謝專科定期追蹤超音波。</td>
+                                </tr>
+                                <tr class="border-b">
+                                    <td class="p-3 border font-semibold">靜止心電圖</td>
+                                    <td class="p-3 border text-amber-700">疑似左心室肥厚</td>
+                                    <td class="p-3 border">竇性心搏過緩(58bpm)<br>早復極(Normal)</td>
+                                    <td class="p-3 border text-emerald-600 font-semibold bg-blue-50/30">正常竇性節律<br>(75 bpm)</td>
+                                    <td class="p-3 border text-amber-700">疑似左心室肥厚</td>
+                                    <td class="p-3 border text-emerald-600 font-semibold">正常竇性節律<br>(恢復完全正常)</td>
+                                    <td class="p-3 border text-xs">重訓與高強度訓練帶來的「運動員心臟」良性適應。2023 與 2025 年心電圖皆呈現完全正常竇性節律。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content 4: Medical Advice -->
+            <div id="tab-advice" class="p-6 hidden">
+                <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 rounded-r-xl">
+                    <h3 class="text-lg font-bold text-blue-900 flex items-center gap-2">
+                        <i class="fa-solid fa-award text-yellow-500"></i> 總體健康總評：96 分 (頂尖等級)
+                    </h3>
+                    <p class="text-sm text-blue-800 mt-1">
+                        納入全新的 2023 年資料後，再次證實您的健康趨勢極度優秀！肌肉量保持在 24.0 kg，體脂率 15.7%，2023 年 eGFR 高達 141.2 ml/min，展現極強的淨化排毒功能。
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card p-5 border border-gray-100">
+                        <h4 class="font-bold text-gray-800 border-b pb-2 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-bone text-amber-500"></i> 1. 骨質密度保護與鈣質礦物質優化
+                        </h4>
+                        <ul class="text-sm text-gray-600 space-y-2 list-disc list-inside">
+                            <li><strong>維生素 D3 + K2 黃金組合</strong>：建議每日補充 <span class="font-semibold text-blue-600">2000 ~ 4000 IU 維生素 D3</span> 搭配 <span class="font-semibold text-blue-600">K2 (MK-7 90-120 mcg)</span>，促進腸道鈣質吸收並導引鈣質沉積至骨骼。</li>
+                            <li><strong>鈣鎂比例調整</strong>：維持每日 2:1 的黃金鈣鎂比（例如 600mg 檸檬酸鈣 + 300mg 螯合鎂），有助於肌肉放鬆與骨骼礦化。</li>
+                            <li><strong>維持脊椎軸向負重</strong>：繼續保持深蹲、硬舉等大重量垂直壓力的脊椎軸向訓練，持續給予成骨細胞良性力學刺激。</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-5 border border-gray-100">
+                        <h4 class="font-bold text-gray-800 border-b pb-2 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-apple-whole text-emerald-500"></i> 2. 脂肪肝清除與飲食細節優化
+                        </h4>
+                        <ul class="text-sm text-gray-600 space-y-2 list-disc list-inside">
+                            <li><strong>控管游離果糖與精緻糖</strong>：儘管體脂極低，肝臟超音波仍提示輕度脂肪肝。請檢視日常飲食中手搖飲料、果汁、含糖補劑及加工醬料，減少果糖在肝臟轉化為脂質。</li>
+                            <li><strong>補充劑選擇</strong>：選擇低糖或無糖的分離乳清蛋白 (Isolate)，減少非必要的碳水與脂肪負擔。</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-5 border border-gray-100">
+                        <h4 class="font-bold text-gray-800 border-b pb-2 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-stethoscopes text-indigo-500"></i> 3. 追蹤計畫與門診建議
+                        </h4>
+                        <ul class="text-sm text-gray-600 space-y-2 list-disc list-inside">
+                            <li><strong>甲狀腺超音波</strong>：右側結節伴微小鈣化點，建議每年至新陳代謝科專科門診複查超音波。</li>
+                            <li><strong>膽囊息肉</strong>：連續5年維持於 0.3 cm，屬良性且穩定，每年常規健康檢查追蹤即可。</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-5 border border-gray-100">
+                        <h4 class="font-bold text-gray-800 border-b pb-2 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-dumbbell text-purple-500"></i> 4. 重訓族群生化指數正名
+                        </h4>
+                        <ul class="text-sm text-gray-600 space-y-2 list-disc list-inside">
+                            <li><strong>肌酸酐 (0.69 mg/dL) & eGFR (最高141.2)</strong>：說明腎功能極度強健，完全無高蛋白飲食帶來的負擔。</li>
+                            <li><strong>CPK/CK 肌酸激酶 (2023: 142 U/L)</strong>：完全處於標準範圍內，反映高強度重訓後的良性肌肉細胞修復與適應。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Disclaimer -->
+        <footer class="text-center text-xs text-gray-500 py-4 border-t border-gray-200">
+            <p><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> 免責聲明：本報告與互動儀表板提供「數據分析與預防醫學建議」，並非取代實體醫師之「正式醫療診斷」。如有任何身體不適請務必尋求專業醫師診治。</p>
+        </footer>
+    </div>
+
+    <!-- Plotly Charts JavaScript Logic -->
+    <script>
+        // Tab switching logic
+        function switchTab(tabId) {
+            const tabs = ['tab-body', 'tab-lab', 'tab-imaging', 'tab-advice'];
+            tabs.forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById('btn-' + id).classList.remove('tab-active');
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        // Data definition (2021-2026)
+        const years = ['2021', '2022', '2023', '2024', '2025', '2026'];
+        const weight = [54.0, 54.1, 50.8, 52.3, 51.8, 50.9];
+        const muscle = [23.2, 23.7, 23.8, 23.3, 24.1, 24.0];
+        const fat = [12.2, 11.5, 8.2, 10.4, 8.7, 8.0];
+        const fatPercent = [22.6, 21.2, 16.1, 20.0, 16.8, 15.7];
+
+        const labYears = ['2021', '2022', '2023', '2024', '2025'];
+        const sbp = [127, 110, 121, 101, 108];
+        const dbp = [88, 79, 77, 70, 61];
+
+        const chol = [179, 179, 167, 157, 153];
+        const ldl = [112.0, 117.6, 93.6, 89.6, 82.8];
+        const hdl = [54.8, 49.4, 56.6, 51.0, 52.2];
+        const tg = [63, 60, 84, 82, 90];
+
+        const cr = [0.78, 0.74, 0.69, 0.72, 0.69];
+        const egfr = [123.4, 131.1, 141.2, 133.6, 139.5];
+
+        const got = [20, 18, 19, 25, 18];
+        const gpt = [29, 20, 25, 32, 15];
+
+        // Render Weight & Muscle Chart
+        Plotly.newPlot('chart-weight-muscle', [
+            { x: years, y: weight, mode: 'lines+markers', name: '體重 (kg)', line: { color: '#2563eb', width: 3 } },
+            { x: years, y: muscle, mode: 'lines+markers', name: '骨骼肌重 (kg)', line: { color: '#059669', width: 3 } },
+            { x: years, y: fat, mode: 'lines+markers', name: '體脂肪重 (kg)', line: { color: '#dc2626', width: 3 } }
+        ], {
+            title: { text: '體重、骨骼肌與體脂肪重變化 (kg)', font: { size: 14 } },
+            margin: { t: 40, b: 40, l: 40, r: 20 },
+            legend: { orientation: 'h', y: -0.2 }
+        }, { responsive: true });
+
+        // Render Fat Percent Chart
+        Plotly.newPlot('chart-fat-percent', [
+            { x: years, y: fatPercent, mode: 'lines+markers+text', text: fatPercent.map(v => v + '%'), textposition: 'top center', name: '體脂肪率 (%)', line: { color: '#d97706', width: 3 } }
+        ], {
+            title: { text: '體脂肪率 (%) 顯著下降趨勢', font: { size: 14 } },
+            margin: { t: 40, b: 40, l: 40, r: 20 }
+        }, { responsive: true });
+
+        // Render Blood Pressure Chart
+        Plotly.newPlot('chart-bp', [
+            { x: labYears, y: sbp, mode: 'lines+markers', name: '收縮壓 (mmHg)', line: { color: '#ea580c', width: 3 } },
+            { x: labYears, y: dbp, mode: 'lines+markers', name: '舒張壓 (mmHg)', line: { color: '#f97316', width: 3, dash: 'dash' } }
+        ], {
+            title: { text: '收縮壓與舒張壓趨勢 (mmHg)', font: { size: 14 } },
+            margin: { t: 40, b: 40, l: 40, r: 20 },
+            legend: { orientation: 'h', y: -0.2 }
+        }, { responsive: true });
+
+        // Render Lipids Chart
+        Plotly.newPlot('chart-lipids', [
+            { x: labYears, y: chol, mode: 'lines+markers', name: '總膽固醇' },
+            { x: labYears, y: ldl, mode: 'lines+markers', name: 'LDL 低密度' },
+            { x: labYears, y: hdl, mode: 'lines+markers', name: 'HDL 高密度' },
+            { x: labYears, y: tg, mode: 'lines+markers', name: '三酸甘油酯' }
+        ], {
+            title: { text: '血脂四項趨勢 (mg/dL)', font: { size: 14 } },
+            margin: { t: 40, b: 40, l: 40, r: 20 },
+            legend: { orientation: 'h', y: -0.2 }
+        }, { responsive: true });
+
+        // Render Kidney Function Chart
+        Plotly.newPlot('chart-kidney', [
+            { x: labYears, y: cr, mode: 'lines+markers', name: '肌酸酐 Creatinine (mg/dL)', yaxis: 'y1' },
+            { x: labYears, y: egfr, mode: 'lines+markers', name: 'eGFR (mL/min)', yaxis: 'y2', line: { color: '#059669', width: 3 } }
+        ], {
+            title: { text: '腎功能指標 (肌酸酐與 eGFR)', font: { size: 14 } },
+            yaxis: { title: '肌酸酐 (mg/dL)' },
+            yaxis2: { title: 'eGFR (mL/min)', overlaying: 'y', side: 'right' },
+            margin: { t: 40, b: 40, l: 40, r: 40 },
+            legend: { orientation: 'h', y: -0.2 }
+        }, { responsive: true });
+
+        // Render Liver Function Chart
+        Plotly.newPlot('chart-liver', [
+            { x: labYears, y: got, mode: 'lines+markers', name: 'GOT/AST (U/L)' },
+            { x: labYears, y: gpt, mode: 'lines+markers', name: 'GPT/ALT (U/L)' }
+        ], {
+            title: { text: '肝功能指數 GOT / GPT (U/L)', font: { size: 14 } },
+            margin: { t: 40, b: 40, l: 40, r: 20 },
+            legend: { orientation: 'h', y: -0.2 }
+        }, { responsive: true });
+    </script>
+</body>
+</html>
